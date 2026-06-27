@@ -41,11 +41,11 @@ namespace GuiReplacer
         private void Awake()
         {
             _instance = this;
-            Config.Instance.Initialize(Config);
+            GuiReplacer.Config.Instance.Initialize(Config);
             GuiLogger.Instance.Initialize(Logger);
             GuiLogger.Instance.Info("GuiReplacer Loaded");
 
-            if (!Config.Instance.Enable)
+            if (!GuiReplacer.Config.Instance.Enable)
             {
                 GuiLogger.Instance.Info("GuiReplacer disabled by config");
                 return;
@@ -53,7 +53,7 @@ namespace GuiReplacer
 
             RunReplacementPipeline();
 
-            if (Config.Instance.EnableDump)
+            if (GuiReplacer.Config.Instance.EnableDump)
             {
                 TextureManager.Instance.DumpAllTextures();
                 Config.Save();
