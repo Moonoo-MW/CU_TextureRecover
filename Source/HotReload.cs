@@ -48,6 +48,10 @@ namespace GuiReplacer
             {
                 GuiLogger.Instance.Info("Hot Reload Triggered");
                 Plugin.Instance.RunReplacementPipeline();
+                if (Overlay.Instance != null)
+                {
+                    Overlay.Instance.ShowReload("Reload Texture Success");
+                }
             }
         }
     }

@@ -45,6 +45,10 @@
       <HintPath>$(UnityManaged)UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(UnityManaged)UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>$(UnityManaged)UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
@@ -56,6 +60,7 @@
     <Compile Include="Source\Config.cs" />
     <Compile Include="Source\HotReload.cs" />
     <Compile Include="Source\Logger.cs" />
+    <Compile Include="Source\Overlay.cs" />
     <Compile Include="Source\Plugin.cs" />
     <Compile Include="Source\TextureLoader.cs" />
     <Compile Include="Source\TextureManager.cs" />
