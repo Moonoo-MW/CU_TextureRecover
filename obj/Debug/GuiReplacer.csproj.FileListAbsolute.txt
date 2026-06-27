@@ -1,0 +1,8 @@
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-unity-mono-gui\obj\Debug\GuiReplacer.csproj.AssemblyReference.cache
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-unity-mono-gui\obj\Debug\GuiReplacer.csproj.CoreCompileInputs.cache
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-texture\bin\Debug\GuiReplacer.dll
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-texture\bin\Debug\GuiReplacer.pdb
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-texture\obj\Debug\GuiReplacer.csproj.AssemblyReference.cache
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-texture\obj\Debug\GuiReplacer.csproj.CoreCompileInputs.cache
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-texture\obj\Debug\GuiReplacer.dll
+C:\Users\jerry\Desktop\CU_TextureRecover-codex-texture\obj\Debug\GuiReplacer.pdb

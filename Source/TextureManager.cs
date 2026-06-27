@@ -11,17 +11,17 @@ using UnityEngine;
 namespace GuiReplacer
 {
     /// <summary>
-    /// Maintains a dictionary of live Texture2D objects keyed by Texture.name.
+    /// Maintains live Texture2D objects keyed by Texture.name.
     /// </summary>
     public sealed class TextureManager
     {
         private static TextureManager _instance;
-        private Dictionary<string, Texture2D> _textures;
+        private Dictionary<string, List<Texture2D>> _textures;
         private Texture2D[] _allTextures;
 
         private TextureManager()
         {
-            _textures = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+            _textures = new Dictionary<string, List<Texture2D>>(StringComparer.OrdinalIgnoreCase);
             _allTextures = new Texture2D[0];
         }
 
@@ -47,7 +47,7 @@ namespace GuiReplacer
         public void RebuildIndex()
         {
             StringComparer comparer = Config.Instance.IgnoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-            _textures = new Dictionary<string, Texture2D>(comparer);
+            _textures = new Dictionary<string, List<Texture2D>>(comparer);
 
             _allTextures = Resources.FindObjectsOfTypeAll<Texture2D>();
             for (int index = 0; index < _allTextures.Length; index++)
@@ -58,27 +58,43 @@ namespace GuiReplacer
                     continue;
                 }
 
-                if (_textures.ContainsKey(texture.name))
+                List<Texture2D> instances;
+                if (!_textures.TryGetValue(texture.name, out instances))
                 {
-                    GuiLogger.Instance.Warning("Duplicate Texture Name : " + texture.name + " (InstanceID " + texture.GetInstanceID() + ")");
-                    continue;
+                    instances = new List<Texture2D>();
+                    _textures.Add(texture.name, instances);
                 }
 
-                _textures.Add(texture.name, texture);
+                instances.Add(texture);
             }
 
-            GuiLogger.Instance.Info("Found " + _textures.Count + " Texture2D");
+            foreach (KeyValuePair<string, List<Texture2D>> pair in _textures)
+            {
+                if (pair.Value.Count > 1)
+                {
+                    GuiLogger.Instance.Warning("Duplicate Texture Name : " + pair.Key + " Found " + pair.Value.Count + " instances");
+                }
+            }
+
+            GuiLogger.Instance.Info("Found " + _allTextures.Length + " Texture2D, indexed " + _textures.Count + " names");
         }
 
         /// <summary>
-        /// Attempts to find a live Texture2D by Texture.name.
+        /// Attempts to find all live Texture2D objects by Texture.name.
         /// </summary>
-        /// <param name="name">The texture name.</param>
-        /// <param name="texture">The found texture.</param>
-        /// <returns>True when the texture exists.</returns>
-        public bool TryGetTexture(string name, out Texture2D texture)
+        public bool TryGetTextures(string name, out List<Texture2D> textures)
         {
-            return _textures.TryGetValue(name, out texture);
+            return _textures.TryGetValue(name, out textures) && textures.Count > 0;
+        }
+
+        /// <summary>
+        /// Dumps verbose Texture, Sprite, and Material relationships for debugging displayed UI references.
+        /// </summary>
+        public void DumpVerboseReferences()
+        {
+            DumpTextures();
+            DumpSprites();
+            DumpMaterials();
         }
 
         /// <summary>
@@ -125,6 +141,51 @@ namespace GuiReplacer
             finally
             {
                 Config.Instance.EnableDump = false;
+            }
+        }
+
+        private void DumpTextures()
+        {
+            for (int index = 0; index < _allTextures.Length; index++)
+            {
+                Texture2D texture = _allTextures[index];
+                if (texture != null)
+                {
+                    GuiLogger.Instance.Info("Texture Name=" + texture.name + " InstanceID=" + texture.GetInstanceID() + " Size=" + texture.width + "x" + texture.height + " Format=" + texture.format + " MipMap=" + texture.mipmapCount + " Readable=" + texture.isReadable);
+                }
+            }
+        }
+
+        private void DumpSprites()
+        {
+            Sprite[] sprites = Resources.FindObjectsOfTypeAll<Sprite>();
+            for (int index = 0; index < sprites.Length; index++)
+            {
+                Sprite sprite = sprites[index];
+                if (sprite != null && sprite.texture != null)
+                {
+                    Texture2D texture = sprite.texture;
+                    GuiLogger.Instance.Info("Sprite " + sprite.name + " -> Texture " + texture.name + " InstanceID=" + texture.GetInstanceID());
+                }
+            }
+        }
+
+        private void DumpMaterials()
+        {
+            Material[] materials = Resources.FindObjectsOfTypeAll<Material>();
+            for (int index = 0; index < materials.Length; index++)
+            {
+                Material material = materials[index];
+                if (material == null || !material.HasProperty("_MainTex"))
+                {
+                    continue;
+                }
+
+                Texture texture = material.mainTexture;
+                if (texture != null)
+                {
+                    GuiLogger.Instance.Info("Material " + material.name + " -> Texture " + texture.name + " InstanceID=" + texture.GetInstanceID());
+                }
             }
         }
 

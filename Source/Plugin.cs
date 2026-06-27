@@ -5,8 +5,10 @@
 
 using BepInEx;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace GuiReplacer
 {
@@ -32,6 +34,7 @@ namespace GuiReplacer
         public const string PluginVersion = "1.0.0";
 
         private static Plugin _instance;
+        private Coroutine _scheduledPipeline;
 
         /// <summary>
         /// Gets the active plugin instance.
@@ -41,28 +44,76 @@ namespace GuiReplacer
         private void Awake()
         {
             _instance = this;
-            Config.Instance.Initialize(Config);
+            GuiReplacer.Config.Instance.Initialize(Config);
             GuiLogger.Instance.Initialize(Logger);
             GuiLogger.Instance.Info("GuiReplacer Loaded");
 
-            if (!Config.Instance.Enable)
+            if (!GuiReplacer.Config.Instance.Enable)
             {
                 GuiLogger.Instance.Info("GuiReplacer disabled by config");
                 return;
             }
 
-            RunReplacementPipeline();
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            ScheduleReplacementPipeline("plugin awake", GuiReplacer.Config.Instance.InitialScanDelaySeconds);
 
-            if (Config.Instance.EnableDump)
+            if (GuiReplacer.Config.Instance.EnableDump)
             {
                 TextureManager.Instance.DumpAllTextures();
                 Config.Save();
             }
         }
 
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+
         private void Update()
         {
             HotReload.Instance.Update();
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!GuiReplacer.Config.Instance.Enable)
+            {
+                return;
+            }
+
+            GuiLogger.Instance.Info("Scene loaded: " + scene.name + " (" + mode + ")");
+            ScheduleReplacementPipeline("scene loaded: " + scene.name, GuiReplacer.Config.Instance.SceneScanDelaySeconds);
+        }
+
+        /// <summary>
+        /// Schedules a delayed replacement pass so scene UI assets have time to load.
+        /// </summary>
+        /// <param name="reason">The reason for scheduling.</param>
+        /// <param name="delaySeconds">The delay in seconds.</param>
+        public void ScheduleReplacementPipeline(string reason, float delaySeconds)
+        {
+            if (_scheduledPipeline != null)
+            {
+                StopCoroutine(_scheduledPipeline);
+            }
+
+            _scheduledPipeline = StartCoroutine(RunReplacementPipelineDelayed(reason, delaySeconds));
+        }
+
+        private IEnumerator RunReplacementPipelineDelayed(string reason, float delaySeconds)
+        {
+            if (delaySeconds > 0f)
+            {
+                GuiLogger.Instance.Info("Replacement pipeline scheduled after " + delaySeconds.ToString("0.###") + "s: " + reason);
+                yield return new WaitForSeconds(delaySeconds);
+            }
+
+            _scheduledPipeline = null;
+            RunReplacementPipeline();
         }
 
         /// <summary>
@@ -73,6 +124,11 @@ namespace GuiReplacer
             try
             {
                 TextureManager.Instance.RebuildIndex();
+                if (GuiReplacer.Config.Instance.EnableVerboseLog)
+                {
+                    TextureManager.Instance.DumpVerboseReferences();
+                }
+
                 List<string> pngFiles = TextureLoader.Instance.ScanPngFiles();
 
                 for (int index = 0; index < pngFiles.Count; index++)
@@ -89,8 +145,8 @@ namespace GuiReplacer
         private void ApplySingleFile(string filePath)
         {
             string key = TextureLoader.Instance.GetTextureKey(filePath);
-            Texture2D target;
-            if (!TextureManager.Instance.TryGetTexture(key, out target))
+            List<Texture2D> targets;
+            if (!TextureManager.Instance.TryGetTextures(key, out targets))
             {
                 GuiLogger.Instance.Warning("Texture Not Found : " + key);
                 GuiLogger.Instance.Warning("Missing Texture : " + key);
@@ -106,7 +162,17 @@ namespace GuiReplacer
 
             try
             {
-                TextureReplacer.Instance.Replace(target, source);
+                int successCount = 0;
+                GuiLogger.Instance.Info(key + " Found " + targets.Count + " instances");
+                for (int index = 0; index < targets.Count; index++)
+                {
+                    if (TextureReplacer.Instance.Replace(targets[index], source))
+                    {
+                        successCount++;
+                    }
+                }
+
+                GuiLogger.Instance.Info(key + " Replace " + successCount + "/" + targets.Count);
             }
             finally
             {
