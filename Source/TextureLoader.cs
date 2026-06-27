@@ -12,7 +12,7 @@ using UnityEngine;
 namespace GuiReplacer
 {
     /// <summary>
-    /// Scans and loads PNG files from the configured Mods folder.
+    /// Scans and loads PNG files from the configured plugin folder.
     /// </summary>
     public sealed class TextureLoader
     {
@@ -43,7 +43,7 @@ namespace GuiReplacer
         /// </summary>
         public string ModsGuiPath
         {
-            get { return Path.Combine(Paths.GameRootPath, Config.Instance.ModsFolder.Replace('/', Path.DirectorySeparatorChar)); }
+            get { return Path.Combine(Paths.PluginPath, Config.Instance.ModsFolder.Replace('/', Path.DirectorySeparatorChar)); }
         }
 
         /// <summary>
@@ -51,11 +51,30 @@ namespace GuiReplacer
         /// </summary>
         public string DumpPath
         {
-            get { return Path.Combine(Paths.GameRootPath, "Mods", "GUI_Dump"); }
+            get { return Path.Combine(Paths.PluginPath, "GuiReplacer", "Cache", "GUI_Dump"); }
+        }
+
+
+        /// <summary>
+        /// Creates the plugin-owned GuiReplacer resource directories.
+        /// </summary>
+        public void EnsurePluginDirectories()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(Paths.PluginPath, "GuiReplacer"));
+                Directory.CreateDirectory(ModsGuiPath);
+                Directory.CreateDirectory(Path.Combine(Paths.PluginPath, "GuiReplacer", "Cache"));
+                Directory.CreateDirectory(Path.Combine(Paths.PluginPath, "GuiReplacer", "Config"));
+            }
+            catch (Exception exception)
+            {
+                GuiLogger.Instance.Exception("Directory initialization failed", exception);
+            }
         }
 
         /// <summary>
-        /// Recursively or non-recursively scans configured Mods/GUI for PNG files.
+        /// Recursively or non-recursively scans configured GuiReplacer/GUI for PNG files.
         /// </summary>
         /// <returns>A list of PNG file paths.</returns>
         public List<string> ScanPngFiles()

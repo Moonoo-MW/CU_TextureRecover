@@ -4,7 +4,9 @@
 // ------------------------------------------------------------------------------
 
 using BepInEx;
+using BepInEx.Configuration;
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -26,15 +28,16 @@ namespace GuiReplacer
         /// <summary>
         /// The display name shown by BepInEx.
         /// </summary>
-        public const string PluginName = "GuiReplacer";
+        public const string PluginName = "CU_TextureRecover";
 
         /// <summary>
         /// The plugin version.
         /// </summary>
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.1.0";
 
         private static Plugin _instance;
         private Coroutine _scheduledPipeline;
+        private ConfigFile _pluginConfigFile;
 
         /// <summary>
         /// Gets the active plugin instance.
@@ -44,9 +47,17 @@ namespace GuiReplacer
         private void Awake()
         {
             _instance = this;
-            GuiReplacer.Config.Instance.Initialize(Config);
+            Directory.CreateDirectory(Path.Combine(Paths.PluginPath, "GuiReplacer", "Config"));
+            _pluginConfigFile = new ConfigFile(Path.Combine(Paths.PluginPath, "GuiReplacer", "Config", "CU_TextureRecover.cfg"), true);
+            GuiReplacer.Config.Instance.Initialize(_pluginConfigFile);
             GuiLogger.Instance.Initialize(Logger);
-            GuiLogger.Instance.Info("GuiReplacer Loaded");
+            GuiLogger.Instance.Info("CU_TextureRecover Loaded");
+            TextureLoader.Instance.EnsurePluginDirectories();
+            Overlay.Initialize(gameObject);
+            if (Overlay.Instance != null)
+            {
+                Overlay.Instance.Show("TextureReplaceMod By Moonoo");
+            }
 
             if (!GuiReplacer.Config.Instance.Enable)
             {
@@ -60,7 +71,7 @@ namespace GuiReplacer
             if (GuiReplacer.Config.Instance.EnableDump)
             {
                 TextureManager.Instance.DumpAllTextures();
-                Config.Save();
+                _pluginConfigFile.Save();
             }
         }
 

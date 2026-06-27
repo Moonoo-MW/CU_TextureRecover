@@ -98,7 +98,7 @@ namespace GuiReplacer
         }
 
         /// <summary>
-        /// Dumps all indexed textures to Mods/GUI_Dump and disables EnableDump afterwards.
+        /// Dumps all indexed textures to GuiReplacer/Cache/GUI_Dump and disables EnableDump afterwards.
         /// </summary>
         public void DumpAllTextures()
         {

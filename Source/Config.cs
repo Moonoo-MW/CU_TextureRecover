@@ -8,7 +8,7 @@ using BepInEx.Configuration;
 namespace GuiReplacer
 {
     /// <summary>
-    /// Provides strongly typed access to GuiReplacer.cfg settings.
+    /// Provides strongly typed access to CU_TextureRecover.cfg settings.
     /// </summary>
     public sealed class Config
     {
@@ -25,6 +25,9 @@ namespace GuiReplacer
         private ConfigEntry<float> _initialScanDelaySeconds;
         private ConfigEntry<float> _sceneScanDelaySeconds;
         private ConfigEntry<string> _modsFolder;
+        private ConfigEntry<bool> _enableOverlay;
+        private ConfigEntry<float> _overlayDuration;
+        private ConfigEntry<float> _overlayFadeTime;
 
         private Config()
         {
@@ -101,27 +104,45 @@ namespace GuiReplacer
         }
 
         /// <summary>
-        /// Gets the relative Mods folder containing replacement PNG files.
+        /// Gets the relative plugin folder containing replacement PNG files.
         /// </summary>
         public string ModsFolder { get { return _modsFolder.Value; } }
 
         /// <summary>
-        /// Binds all BepInEx configuration entries and creates GuiReplacer.cfg when needed.
+        /// Gets whether the IMGUI overlay is enabled.
+        /// </summary>
+        public bool EnableOverlay { get { return _enableOverlay.Value; } }
+
+        /// <summary>
+        /// Gets the startup overlay hold duration in seconds.
+        /// </summary>
+        public float OverlayDuration { get { return _overlayDuration.Value; } }
+
+        /// <summary>
+        /// Gets the overlay fade-in time in seconds.
+        /// </summary>
+        public float OverlayFadeTime { get { return _overlayFadeTime.Value; } }
+
+        /// <summary>
+        /// Binds all BepInEx configuration entries and creates CU_TextureRecover.cfg when needed.
         /// </summary>
         /// <param name="configFile">The BepInEx configuration file.</param>
         public void Initialize(ConfigFile configFile)
         {
             _enable = configFile.Bind("General", "Enable", true, "Enable runtime GUI texture replacement.");
-            _enableHotReload = configFile.Bind("General", "EnableHotReload", true, "Press F8 to rescan Mods/GUI and reapply replacements.");
+            _enableHotReload = configFile.Bind("General", "EnableHotReload", true, "Press F8 to rescan GuiReplacer/GUI and reapply replacements.");
             _recursiveScan = configFile.Bind("General", "RecursiveScan", true, "Scan replacement PNG files recursively.");
             _ignoreCase = configFile.Bind("General", "IgnoreCase", true, "Match PNG names to Texture.name without case sensitivity.");
             _allowSizeMismatch = configFile.Bind("General", "AllowSizeMismatch", false, "Allow replacement when image size differs. The replacement is scaled to the original texture size.");
             _enableLog = configFile.Bind("General", "EnableLog", true, "Enable GuiReplacer logging.");
-            _modsFolder = configFile.Bind("General", "ModsFolder", "Mods/GUI", "Path relative to the game root containing replacement PNG files.");
+            _modsFolder = configFile.Bind("General", "ModsFolder", "GuiReplacer/GUI", "Path relative to the plugin directory containing replacement PNG files.");
+            _enableOverlay = configFile.Bind("Overlay", "EnableOverlay", true, "Enable the non-interactive IMGUI notification overlay.");
+            _overlayDuration = configFile.Bind("Overlay", "OverlayDuration", 3f, "Seconds the startup overlay remains fully visible before fading out.");
+            _overlayFadeTime = configFile.Bind("Overlay", "OverlayFadeTime", 0.3f, "Seconds used by the overlay fade-in animation.");
             _initialScanDelaySeconds = configFile.Bind("General", "InitialScanDelaySeconds", 3f, "Delay before the first automatic replacement pass, allowing startup UI textures to load.");
             _sceneScanDelaySeconds = configFile.Bind("General", "SceneScanDelaySeconds", 2f, "Delay after each scene load before automatically rescanning and replacing textures.");
             _enableVerboseLog = configFile.Bind("Debug", "EnableVerboseLog", false, "Log all Texture2D, Sprite->Texture, and Material->Texture relationships for debugging UI references.");
-            _enableDump = configFile.Bind("Debug", "EnableDump", false, "Dump all Texture2D objects to Mods/GUI_Dump, then automatically turn this option off.");
+            _enableDump = configFile.Bind("Debug", "EnableDump", false, "Dump all Texture2D objects to GuiReplacer/Cache/GUI_Dump, then automatically turn this option off.");
             configFile.Save();
         }
     }
