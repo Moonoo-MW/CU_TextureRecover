@@ -38,15 +38,18 @@ namespace GuiReplacer
         /// <summary>
         /// Applies a source PNG texture into an existing target Texture2D.
         /// </summary>
-        /// <param name="target">The existing game texture to mutate.</param>
-        /// <param name="source">The temporary replacement texture.</param>
-        /// <returns>True when the replacement succeeds.</returns>
         public bool Replace(Texture2D target, Texture2D source)
         {
             if (target == null || source == null)
             {
                 GuiLogger.Instance.Error("Replace Failed : null texture");
                 return false;
+            }
+
+            LogTextureDetails("Replace Begin", target);
+            if (!target.isReadable)
+            {
+                GuiLogger.Instance.Warning("Target texture is not readable before replacement. CPU overwrite will attempt Resize/Reinitialize path. Name=" + target.name + " InstanceID=" + target.GetInstanceID());
             }
 
             bool sizeMismatch = target.width != source.width || target.height != source.height;
@@ -60,9 +63,9 @@ namespace GuiReplacer
                 }
             }
 
+            Texture2D preparedSource = source;
             try
             {
-                Texture2D preparedSource = source;
                 if (sizeMismatch)
                 {
                     preparedSource = CreateReadableCopy(source, target.width, target.height);
@@ -73,20 +76,20 @@ namespace GuiReplacer
                     }
                 }
 
-                bool copied = TryCopyTexture(target, preparedSource);
-                if (!copied)
+                Color32[] replacementPixels = preparedSource.GetPixels32();
+                if (!TryCpuReplace(target, replacementPixels, preparedSource.width, preparedSource.height))
                 {
-                    Color32[] pixels = preparedSource.GetPixels32();
-                    target.SetPixels32(pixels);
-                    target.Apply(false, false);
+                    return false;
                 }
 
-                if (preparedSource != source)
+                if (!VerifyPixels(target, replacementPixels))
                 {
-                    UnityEngine.Object.Destroy(preparedSource);
+                    GuiLogger.Instance.Error("Replace Failed : " + target.name + " Pixel verification failed.");
+                    LogTextureDetails("Replace Failed", target);
+                    return false;
                 }
 
-                GuiLogger.Instance.Info("Replace Success : " + target.name);
+                LogTextureDetails("Replace Success", target);
                 return true;
             }
             catch (Exception exception)
@@ -94,15 +97,18 @@ namespace GuiReplacer
                 GuiLogger.Instance.Exception("Replace Failed : " + target.name, exception);
                 return false;
             }
+            finally
+            {
+                if (preparedSource != source && preparedSource != null)
+                {
+                    UnityEngine.Object.Destroy(preparedSource);
+                }
+            }
         }
 
         /// <summary>
         /// Creates a readable RGBA32 copy of a texture, optionally scaled to a new size.
         /// </summary>
-        /// <param name="source">The source texture.</param>
-        /// <param name="width">The output width.</param>
-        /// <param name="height">The output height.</param>
-        /// <returns>A readable RGBA32 texture, or null when conversion fails.</returns>
         public Texture2D CreateReadableCopy(Texture source, int width, int height)
         {
             RenderTexture previous = RenderTexture.active;
@@ -141,17 +147,76 @@ namespace GuiReplacer
             }
         }
 
-        private bool TryCopyTexture(Texture2D target, Texture2D source)
+        private bool TryCpuReplace(Texture2D target, Color32[] pixels, int width, int height)
         {
             try
             {
-                Graphics.CopyTexture(source, 0, 0, target, 0, 0);
+                if (target.width != width || target.height != height || !target.isReadable || !IsCpuWritableFormat(target.format))
+                {
+                    if (!target.Resize(width, height, TextureFormat.RGBA32, target.mipmapCount > 1))
+                    {
+                        GuiLogger.Instance.Error("Replace Failed : " + target.name + " Resize/Reinitialize returned false");
+                        return false;
+                    }
+                }
+
+                target.SetPixels32(pixels);
+                target.Apply(false, false);
                 return true;
             }
-            catch
+            catch (Exception exception)
             {
+                GuiLogger.Instance.Exception("CPU texture replacement failed: " + target.name, exception);
                 return false;
             }
+        }
+
+        private bool VerifyPixels(Texture2D target, Color32[] expectedPixels)
+        {
+            try
+            {
+                Color32[] actualPixels = target.GetPixels32();
+                if (actualPixels == null || actualPixels.Length != expectedPixels.Length)
+                {
+                    GuiLogger.Instance.Error("Pixel verification failed: pixel count mismatch target=" + (actualPixels == null ? 0 : actualPixels.Length) + " expected=" + expectedPixels.Length);
+                    return false;
+                }
+
+                int[] samples = new int[] { 0, expectedPixels.Length / 4, expectedPixels.Length / 2, (expectedPixels.Length * 3) / 4, expectedPixels.Length - 1 };
+                for (int index = 0; index < samples.Length; index++)
+                {
+                    int sampleIndex = samples[index];
+                    if (!actualPixels[sampleIndex].Equals(expectedPixels[sampleIndex]))
+                    {
+                        GuiLogger.Instance.Error("Pixel verification failed at " + sampleIndex + " expected=" + expectedPixels[sampleIndex] + " actual=" + actualPixels[sampleIndex]);
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception exception)
+            {
+                GuiLogger.Instance.Exception("Pixel verification failed for " + target.name, exception);
+                return false;
+            }
+        }
+
+        private bool IsCpuWritableFormat(TextureFormat format)
+        {
+            return format == TextureFormat.Alpha8 ||
+                   format == TextureFormat.ARGB4444 ||
+                   format == TextureFormat.RGB24 ||
+                   format == TextureFormat.RGBA32 ||
+                   format == TextureFormat.ARGB32 ||
+                   format == TextureFormat.RGB565 ||
+                   format == TextureFormat.RGBA4444 ||
+                   format == TextureFormat.BGRA32;
+        }
+
+        private void LogTextureDetails(string prefix, Texture2D texture)
+        {
+            GuiLogger.Instance.Info(prefix + " : " + texture.name + " Name=" + texture.name + " InstanceID=" + texture.GetInstanceID() + " Size=" + texture.width + "x" + texture.height + " Format=" + texture.format + " MipMap=" + texture.mipmapCount + " Readable=" + texture.isReadable);
         }
     }
 }

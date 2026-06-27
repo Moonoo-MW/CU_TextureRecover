@@ -21,6 +21,9 @@ namespace GuiReplacer
         private ConfigEntry<bool> _allowSizeMismatch;
         private ConfigEntry<bool> _enableLog;
         private ConfigEntry<bool> _enableDump;
+        private ConfigEntry<bool> _enableVerboseLog;
+        private ConfigEntry<float> _initialScanDelaySeconds;
+        private ConfigEntry<float> _sceneScanDelaySeconds;
         private ConfigEntry<string> _modsFolder;
 
         private Config()
@@ -74,6 +77,21 @@ namespace GuiReplacer
         public bool EnableLog { get { return _enableLog.Value; } }
 
         /// <summary>
+        /// Gets whether verbose texture, sprite, and material diagnostics are enabled.
+        /// </summary>
+        public bool EnableVerboseLog { get { return _enableVerboseLog.Value; } }
+
+        /// <summary>
+        /// Gets the delayed scan time after plugin startup.
+        /// </summary>
+        public float InitialScanDelaySeconds { get { return _initialScanDelaySeconds.Value; } }
+
+        /// <summary>
+        /// Gets the delayed scan time after each scene load.
+        /// </summary>
+        public float SceneScanDelaySeconds { get { return _sceneScanDelaySeconds.Value; } }
+
+        /// <summary>
         /// Gets or sets whether all loaded Texture2D objects should be dumped to PNG files.
         /// </summary>
         public bool EnableDump
@@ -100,6 +118,9 @@ namespace GuiReplacer
             _allowSizeMismatch = configFile.Bind("General", "AllowSizeMismatch", false, "Allow replacement when image size differs. The replacement is scaled to the original texture size.");
             _enableLog = configFile.Bind("General", "EnableLog", true, "Enable GuiReplacer logging.");
             _modsFolder = configFile.Bind("General", "ModsFolder", "Mods/GUI", "Path relative to the game root containing replacement PNG files.");
+            _initialScanDelaySeconds = configFile.Bind("General", "InitialScanDelaySeconds", 3f, "Delay before the first automatic replacement pass, allowing startup UI textures to load.");
+            _sceneScanDelaySeconds = configFile.Bind("General", "SceneScanDelaySeconds", 2f, "Delay after each scene load before automatically rescanning and replacing textures.");
+            _enableVerboseLog = configFile.Bind("Debug", "EnableVerboseLog", false, "Log all Texture2D, Sprite->Texture, and Material->Texture relationships for debugging UI references.");
             _enableDump = configFile.Bind("Debug", "EnableDump", false, "Dump all Texture2D objects to Mods/GUI_Dump, then automatically turn this option off.");
             configFile.Save();
         }
